@@ -1,0 +1,34 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://test_zone</uri>
+    </include>
+    <include>
+      <uri>model://cafe_table</uri>
+      <name>table1</name>
+      <pose>4.05 3 0 0 0 1.57</pose>
+    </include>
+    <include>
+      <uri>model://cafe_table</uri>
+      <name>table2</name>
+      <pose>6 -6 -0.4 0 0 1.57</pose>
+    </include>
+    <include>
+      <uri>model://demo_cube</uri>
+      <name>cube1</name>
+      <pose>3.7 3.15 0.83 0 0 0</pose>
+    </include>
+    <!-- <include>
+      <uri>model://demo_cube</uri>
+      <name>cube2</name>
+      <pose>3.78 3.15 0.83 0 0 0</pose>
+    </include> -->
+  </world>
+</sdf>

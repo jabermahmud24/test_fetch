@@ -1,0 +1,110 @@
+<launch>
+
+  <!--–––––––– Common simulation flags ––––––––-->
+  <arg name="debug"      default="false"/>
+  <arg name="gui"        default="true"/>
+  <arg name="headless"   default="false"/>
+
+  <!--––––––––  Locobot-specific settings ––––––––-->
+  <arg name="locobot_robot_model"                default="locobot_px100"/>
+  <arg name="locobot_robot_name"                 default="locobot"/>
+  <arg name="locobot_dof"                        default="4"/>
+  <arg name="locobot_show_lidar"                 default="false"/>
+  <arg name="locobot_use_position_controllers"   default="false"/>
+  <arg name="use_trajectory_controllers" default="false"/>
+
+  <!--––––––––  Fetch-specific settings ––––––––-->
+  <arg name="robot" default="fetch"/>
+
+  <!--––––––––  Gazebo search paths ––––––––-->
+  <env name="GAZEBO_MODEL_PATH"
+       value="$(find fetch_gazebo)/models:$(find interbotix_xslocobot_gazebo)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+  <env name="GAZEBO_RESOURCE_PATH"
+       value="$(find interbotix_xslocobot_gazebo):$(optenv GAZEBO_RESOURCE_PATH)"/>
+
+  <!--––––––––  Start Gazebo once ––––––––-->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="debug"       value="$(arg debug)"/>
+    <arg name="gui"         value="$(arg gui)"/>
+    <arg name="paused"      value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="headless"    value="$(arg headless)"/>
+    <arg name="world_name"
+          value="$(find fetch_gazebo)/worlds/test_zone_2_without_second_door.sdf"/>
+  </include>
+
+  <include file="$(find fetch_gazebo)/launch/include/$(arg robot).launch.xml" />
+
+
+  <!--––––––––  Spawn Fetch (unmodified include) ––––––––-->
+  <!-- <include file="$(find fetch_gazebo)/launch/include/$(arg robot).launch.xml">
+    <arg name="robot" value="$(arg robot)"/>
+  </include> -->
+
+  <!--––––––––  Locobot controllers ––––––––-->
+  <rosparam file="$(find interbotix_xslocobot_gazebo)/config/locobot_gazebo_controllers.yaml"
+            command="load"
+            ns="$(arg locobot_robot_name)"/>
+
+  <!-- Trajectory or position controller sets (optional) -->
+  <group if="$(arg use_trajectory_controllers)">
+    <rosparam file="$(find interbotix_xslocobot_gazebo)/config/trajectory_controllers/$(eval 'mobile_' + arg('locobot_robot_model').split('_')[1])_trajectory_controllers.yaml"
+              command="load"
+              ns="$(arg locobot_robot_name)"/>
+    <node name="locobot_controller_spawner"
+          pkg="controller_manager"
+          type="controller_manager"
+          ns="$(arg locobot_robot_name)"
+          output="screen"
+          args="spawn arm_controller gripper_controller pan_controller tilt_controller joint_state_controller joint_trajectory_controller"/>
+  </group>
+
+  <group if="$(arg locobot_use_position_controllers)">
+    <rosparam file="$(find interbotix_xslocobot_gazebo)/config/position_controllers/$(eval 'mobile_' + arg('locobot_robot_model').split('_')[1])_position_controllers.yaml"
+              command="load"
+              ns="$(arg locobot_robot_name)"/>
+    <!-- Adjust which controller list to spawn based on DOF -->
+    <node if="$(eval locobot_dof == 4)"
+          name="locobot_controller_spawner"
+          pkg="controller_manager"
+          type="controller_manager"
+          ns="$(arg locobot_robot_name)"
+          output="screen"
+          args="spawn joint_state_controller waist_controller shoulder_controller elbow_controller wrist_angle_controller left_finger_controller right_finger_controller pan_controller tilt_controller"/>
+    <node if="$(eval locobot_dof == 5)"
+          name="locobot_controller_spawner"
+          pkg="controller_manager"
+          type="controller_manager"
+          ns="$(arg locobot_robot_name)"
+          output="screen"
+          args="spawn joint_state_controller waist_controller shoulder_controller elbow_controller wrist_angle_controller wrist_rotate_controller left_finger_controller right_finger_controller pan_controller tilt_controller"/>
+    <node if="$(eval locobot_dof == 6)"
+          name="locobot_controller_spawner"
+          pkg="controller_manager"
+          type="controller_manager"
+          ns="$(arg locobot_robot_name)"
+          output="screen"
+          args="spawn joint_state_controller waist_controller shoulder_controller elbow_controller forearm_roll_controller wrist_angle_controller wrist_rotate_controller left_finger_controller right_finger_controller pan_controller tilt_controller"/>
+  </group>
+
+  <!--––––––––  Locobot URDF + RViz (optional) ––––––––-->
+  <include file="$(find interbotix_xslocobot_descriptions)/launch/xslocobot_description.launch">
+    <arg name="robot_model"          value="$(arg locobot_robot_model)"/>
+    <arg name="robot_name"           value="$(arg locobot_robot_name)"/>
+    <arg name="show_lidar"           value="$(arg locobot_show_lidar)"/>
+    <arg name="show_gripper_bar"     value="true"/>
+    <arg name="show_gripper_fingers" value="true"/>
+    <arg name="external_urdf_loc"    value=""/>
+    <arg name="use_rviz"             value="false"/>
+    <arg name="rviz_frame"           value="$(arg locobot_robot_name)/base_footprint"/>
+  </include>
+
+  <!--––––––––  Actually drop the Locobot into Gazebo ––––––––-->
+  <node name="locobot_urdf_spawner"
+        pkg="gazebo_ros"
+        type="spawn_model"
+        ns="$(arg locobot_robot_name)"
+        output="screen"
+        args="-urdf -model $(arg locobot_robot_name) -param robot_description -x 1.0 -y 2.0 -z 0.0 -Y 0.0"/>
+
+</launch>
